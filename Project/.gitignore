@@ -8,7 +8,6 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .ipynb_checkpoints/
-models/
 *.streamlit/
 .DS_Store
 data/*.csv

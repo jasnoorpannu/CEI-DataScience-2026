@@ -43,7 +43,7 @@ recommendations). It also offers a retrieval-based chat assistant and a Streamli
 ## Quick start
 
 ```bash
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 
 # train (or reuse the existing models/ artifacts)
 python scripts/train.py
@@ -53,6 +53,16 @@ python scripts/run_app.py
 ```
 
 You can also evaluate a single resume from the command line with `python scripts/evaluate.py`.
+
+## Deploy to Streamlit Community Cloud
+
+1. Push this repo to GitHub (the trained `models/` folder is committed on purpose so the app runs without retraining).
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **Create app** → connect the GitHub repo.
+3. Set:
+   - **Repository**: `jasnoorpannu/CEI-DataScience-2026`
+   - **Branch**: `main`
+   - **Main file path**: `Project/src/app.py`
+4. Deploy. The first load downloads the MiniLM embedding model from Hugging Face.
 
 ## Interview talking points
 
