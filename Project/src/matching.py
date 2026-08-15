@@ -153,9 +153,10 @@ class MatchComponents:
     skill_coverage: float = 0.0
     embedding_similarity: float = 0.0
     category_affinity: float = 0.0
+    weights_version: str = config.MATCH_WEIGHT_VERSION
 
-    def overall(self) -> float:
-        weights = config.MATCH_WEIGHTS
+    def overall(self, weights: dict[str, float] | None = None) -> float:
+        weights = weights or config.MATCH_WEIGHTS
         raw = (
             weights["skill_coverage"] * self.skill_coverage
             + weights["embedding_similarity"] * self.embedding_similarity
@@ -176,6 +177,8 @@ class MatchResult:
     resume_categories: list[tuple[str, float]] = field(default_factory=list)
     job_categories: list[tuple[str, float]] = field(default_factory=list)
     components: MatchComponents = field(default_factory=MatchComponents)
+    semantic_matches: list[dict] = field(default_factory=list)
+    transferable_skills: list[tuple[str, str, float]] = field(default_factory=list)
 
     @property
     def overall_score(self) -> float:
@@ -218,6 +221,9 @@ def match_resume_to_job(
     classifier,
     embedder,
     top_k: int = 5,
+    skill_extractor=None,
+    weights: dict[str, float] | None = None,
+    weights_version: str | None = None,
 ) -> MatchResult:
     resume_text = (resume_text or "").strip()
     if not resume_text:
@@ -227,11 +233,21 @@ def match_resume_to_job(
     resume_skills = extract_skills(resume_text)
     job_skills = requirements.skills
 
+    semantic_matches: list[dict] = []
+    transferable: list[tuple[str, str, float]] = []
+    if skill_extractor is not None and job_skills:
+        result = skill_extractor.match(resume_text, job_skills)
+        semantic_matches = [m.to_dict() for m in result.all()]
+        if hasattr(skill_extractor, "transferable"):
+            transferable = skill_extractor.transferable(resume_skills, job_skills)
+
     matched = skill_overlap(resume_skills, job_skills)
-    missing = skill_gaps(resume_skills, job_skills)
+    matched_semantic = {m["skill"] for m in semantic_matches}
+    matched = list(dict.fromkeys(matched + sorted(matched_semantic)))
+    missing = skill_gaps(matched, job_skills)
     extra = [s for s in resume_skills if s not in job_skills]
 
-    coverage = skill_coverage(resume_skills, job_skills) if job_skills else 0.0
+    coverage = skill_coverage(matched, job_skills) if job_skills else 0.0
 
     resume_cats = classifier.predict_categories([resume_text])[0][:top_k]
     job_cats = []
@@ -252,7 +268,9 @@ def match_resume_to_job(
         skill_coverage=coverage,
         embedding_similarity=sim,
         category_affinity=affinity,
+        weights_version=weights_version or config.MATCH_WEIGHT_VERSION,
     )
+    components.overall(weights=weights)
 
     return MatchResult(
         resume_text=resume_text,
@@ -265,4 +283,6 @@ def match_resume_to_job(
         resume_categories=resume_cats,
         job_categories=job_cats,
         components=components,
+        semantic_matches=semantic_matches,
+        transferable_skills=transferable,
     )

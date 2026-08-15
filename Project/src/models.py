@@ -135,9 +135,11 @@ class EmbeddingGenerator:
             stop_words="english",
         )
         x = self._vectorizer.fit_transform([clean_text(t) for t in texts])
-        n_components = min(self.dimension, x.shape[1] - 1)
-        self._svd = TruncatedSVD(n_components=n_components, random_state=config.RANDOM_SEED)
-        self._svd.fit(x)
+        self._svd = None
+        if x.shape[1] > 1:
+            n_components = max(1, min(self.dimension, x.shape[1] - 1))
+            self._svd = TruncatedSVD(n_components=n_components, random_state=config.RANDOM_SEED)
+            self._svd.fit(x)
         return self
 
     def encode(self, texts: Sequence[str]) -> np.ndarray:
@@ -151,10 +153,13 @@ class EmbeddingGenerator:
             except Exception:
                 if self._svd is None:
                     raise
-        if self._vectorizer is None or self._svd is None:
+        if self._vectorizer is None:
             raise RuntimeError("Fallback embedder not fitted; call fit_fallback first.")
         x = self._vectorizer.transform([clean_text(t) for t in texts])
-        vectors = self._svd.transform(x)
+        if self._svd is None:
+            vectors = x.toarray()
+        else:
+            vectors = self._svd.transform(x)
         return self._normalizer.transform(vectors).astype(np.float32)
 
     def encode_one(self, text: str) -> np.ndarray:

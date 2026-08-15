@@ -1837,5 +1837,15 @@
       "responsive"
     ]
   },
-  "trained_on": "D:\\Celebal Technologies\\Project\\data\\resumes_dataset.jsonl"
+  "trained_on": "D:\\Celebal Technologies\\Project\\data\\resumes_dataset.jsonl",
+  "model_id": "tfidf-lr-v2-9f3b11c2aa41",
+  "version": "2.0.0",
+  "trained_at": "2025-11-20T14:30:00+00:00",
+  "dataset_sha": "c221575af9f58c7f",
+  "runtime": {
+    "python": "3.14.7",
+    "sklearn": "1.9.0",
+    "numpy": "2.5.2",
+    "pandas": "3.0.5"
+  }
 }

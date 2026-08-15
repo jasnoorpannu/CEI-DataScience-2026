@@ -8,10 +8,12 @@ import numpy as np
 import pandas as pd
 
 from src import config
+from src.calibration import load_calibrated_weights
 from src.chat import ResumeAssistant
 from src.feedback import FeedbackGenerator, FeedbackReport
 from src.matching import MatchResult, generate_requirements_for_category, match_resume_to_job
 from src.models import EmbeddingGenerator, TFIDFClassifier, VectorStore
+from src.semantic_skills import SemanticSkillExtractor
 
 
 class Pipeline:
@@ -24,6 +26,9 @@ class Pipeline:
         self.metadata: dict[str, Any] = {}
         self.feedback_generator: FeedbackGenerator | None = None
         self.assistant: ResumeAssistant | None = None
+        self.calibrated_weights: dict[str, float] | None = None
+        self.weights_version: str = config.MATCH_WEIGHT_VERSION
+        self.semantic_extractor: SemanticSkillExtractor | None = None
         self._ready = False
 
     @classmethod
@@ -55,6 +60,12 @@ class Pipeline:
         self.records = self._load_records()
         self.metadata = self._load_metadata()
 
+        calibrated = load_calibrated_weights()
+        if calibrated is not None:
+            self.calibrated_weights = calibrated.weights
+            self.weights_version = calibrated.version or calibrated.method
+
+        self.semantic_extractor = SemanticSkillExtractor(self.embedder)
         self.feedback_generator = FeedbackGenerator(
             classifier=self.classifier,
             embedder=self.embedder,
@@ -64,6 +75,9 @@ class Pipeline:
             ),
             records=self.records,
             top_skills_by_cat=self.metadata.get("top_skills", {}),
+            weights=self.calibrated_weights,
+            weights_version=self.weights_version,
+            skill_extractor=self.semantic_extractor,
         )
         self.assistant = ResumeAssistant(self)
         self._ready = True
@@ -111,6 +125,23 @@ class Pipeline:
     def feedback(self, resume_text: str, job_text: str | None) -> FeedbackReport:
         self.require()
         return self.feedback_generator.generate(resume_text, job_text)
+
+    def feedback_with(
+        self,
+        resume_text: str,
+        job_text: str | None,
+        skill_extractor=None,
+        weights: dict[str, float] | None = None,
+        weights_version: str | None = None,
+    ) -> FeedbackReport:
+        self.require()
+        return self.feedback_generator.generate(
+            resume_text,
+            job_text,
+            skill_extractor=skill_extractor,
+            weights=weights,
+            weights_version=weights_version,
+        )
 
     def requirements_for_category(self, category: str) -> str:
         self.require()

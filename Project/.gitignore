@@ -6,6 +6,7 @@ __pycache__/
 venv/
 .pytest_cache/
 .mypy_cache/
+logs/
 .ruff_cache/
 .ipynb_checkpoints/
 *.streamlit/
@@ -13,3 +14,4 @@ venv/
 data/*.csv
 data/*.jsonl
 !data/resumes_dataset.jsonl
+!data/hiring_outcomes.jsonl

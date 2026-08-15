@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import platform
 import sys
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 
@@ -20,6 +25,14 @@ from src.models import EmbeddingGenerator, TFIDFClassifier
 
 def _prepare_outputs() -> None:
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _dataset_sha(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()[:16]
 
 
 def _save_records(df: pd.DataFrame) -> None:
@@ -84,6 +97,16 @@ def train(args: argparse.Namespace) -> dict:
         for cat in classifier.encoder.classes_
     }
     metadata = {
+        "model_id": uuid.uuid4().hex[:12],
+        "version": "2.0.0",
+        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "dataset_sha": _dataset_sha(Path(args.data)),
+        "runtime": {
+            "python": platform.python_version(),
+            "sklearn": sklearn.__version__,
+            "numpy": np.__version__,
+            "pandas": pd.__version__,
+        },
         "num_resumes": int(len(df)),
         "num_categories": int(df["Category"].nunique()),
         "categories": [str(c) for c in classifier.encoder.classes_],

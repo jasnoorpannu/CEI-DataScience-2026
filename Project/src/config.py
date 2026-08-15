@@ -18,6 +18,13 @@ ARTIFACT_EMBEDDER_DIR = MODELS_DIR / "embedder"
 ARTIFACT_METADATA = MODELS_DIR / "metadata.json"
 ARTIFACT_EMBEDDINGS = MODELS_DIR / "resume_embeddings.npy"
 ARTIFACT_RECORDS = MODELS_DIR / "resume_records.jsonl"
+ARTIFACT_CALIBRATED_WEIGHTS = MODELS_DIR / "calibrated_weights.json"
+ARTIFACT_EVAL_REPORT = MODELS_DIR / "eval_report.json"
+ARTIFACT_EVAL_REPORT_MD = MODELS_DIR / "eval_report.md"
+
+LABELLED_HIRING_DATA = DATA_DIR / "hiring_outcomes.jsonl"
+USERS_FILE = DATA_DIR / "users.json"
+LOG_DIR = PROJECT_ROOT / "logs"
 
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
@@ -44,6 +51,27 @@ MATCH_WEIGHTS = {
     "embedding_similarity": 0.30,
     "category_affinity": 0.25,
 }
+MATCH_WEIGHT_VERSION = "manual-45-30-25"
+
+SCREENING_THRESHOLDS = [
+    ("strong_advance", 80.0),
+    ("advance", 60.0),
+    ("maybe", 40.0),
+    ("pass", 0.0),
+]
+
+SEMANTIC_SKILL_THRESHOLD = 0.42
+SEMANTIC_RELATED_TOP_K = 5
+
+HIRING_STAGES = [
+    "sourced",
+    "screened",
+    "shortlisted",
+    "interview",
+    "offer",
+    "hired",
+    "rejected",
+]
 
 RANDOM_SEED = 42
 

@@ -1,0 +1,249 @@
+{
+  "classification": {
+    "accuracy": 0.9348571428571428,
+    "macro_f1": 0.9551652328758808,
+    "weighted_f1": 0.9333018315233644,
+    "per_class": {
+      "AI Engineer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 71.0
+      },
+      "Backend Developer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 76.0
+      },
+      "Blockchain": {
+        "precision": 1.0,
+        "recall": 0.7446808510638298,
+        "f1": 0.8536585365853658,
+        "support": 47.0
+      },
+      "Blockchain Developer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 30.0
+      },
+      "Business Analyst": {
+        "precision": 0.891566265060241,
+        "recall": 0.9866666666666667,
+        "f1": 0.9367088607594937,
+        "support": 150.0
+      },
+      "Cloud Engineer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 92.0
+      },
+      "Cybersecurity Analyst": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 66.0
+      },
+      "Data Science": {
+        "precision": 0.8963963963963963,
+        "recall": 0.995,
+        "f1": 0.943127962085308,
+        "support": 200.0
+      },
+      "Database": {
+        "precision": 0.9747899159663865,
+        "recall": 0.7733333333333333,
+        "f1": 0.862453531598513,
+        "support": 150.0
+      },
+      "Database Administrator": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 56.0
+      },
+      "DevOps": {
+        "precision": 0.9779005524861878,
+        "recall": 0.9833333333333333,
+        "f1": 0.9806094182825484,
+        "support": 180.0
+      },
+      "Digital Media": {
+        "precision": 0.9263157894736842,
+        "recall": 0.88,
+        "f1": 0.9025641025641026,
+        "support": 100.0
+      },
+      "DotNet Developer": {
+        "precision": 0.8851351351351351,
+        "recall": 0.9357142857142857,
+        "f1": 0.9097222222222222,
+        "support": 140.0
+      },
+      "ETL Developer": {
+        "precision": 0.8359375,
+        "recall": 0.8916666666666667,
+        "f1": 0.8629032258064516,
+        "support": 120.0
+      },
+      "Engineering Manager": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 30.0
+      },
+      "Frontend Developer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 76.0
+      },
+      "Full Stack Developer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 102.0
+      },
+      "Java Developer": {
+        "precision": 0.8944954128440367,
+        "recall": 0.975,
+        "f1": 0.9330143540669856,
+        "support": 200.0
+      },
+      "Machine Learning Engineer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 81.0
+      },
+      "Mobile Developer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 46.0
+      },
+      "Network Security Engineer": {
+        "precision": 0.9523809523809523,
+        "recall": 1.0,
+        "f1": 0.975609756097561,
+        "support": 120.0
+      },
+      "Principal Engineer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 25.0
+      },
+      "Product Manager": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 25.0
+      },
+      "Python Developer": {
+        "precision": 0.8776595744680851,
+        "recall": 0.825,
+        "f1": 0.8505154639175257,
+        "support": 200.0
+      },
+      "QA Engineer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 61.0
+      },
+      "React Developer": {
+        "precision": 0.8407079646017699,
+        "recall": 0.6333333333333333,
+        "f1": 0.7224334600760456,
+        "support": 150.0
+      },
+      "SAP Developer": {
+        "precision": 0.9897959183673469,
+        "recall": 0.97,
+        "f1": 0.9797979797979798,
+        "support": 100.0
+      },
+      "SQL Developer": {
+        "precision": 0.83,
+        "recall": 0.9222222222222223,
+        "f1": 0.8736842105263158,
+        "support": 180.0
+      },
+      "Site Reliability Engineer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 46.0
+      },
+      "Software Developer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 134.0
+      },
+      "System Administrator": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 40.0
+      },
+      "Technical Lead": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 35.0
+      },
+      "Technical Writer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 20.0
+      },
+      "Testing": {
+        "precision": 0.8765432098765432,
+        "recall": 0.9466666666666667,
+        "f1": 0.9102564102564102,
+        "support": 150.0
+      },
+      "UI/UX Designer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 51.0
+      },
+      "Web Designing": {
+        "precision": 0.927536231884058,
+        "recall": 0.8533333333333334,
+        "f1": 0.8888888888888888,
+        "support": 150.0
+      }
+    },
+    "note": "Classification metrics are in-sample (all resumes); held-out test accuracy is recorded in models/metadata.json."
+  },
+  "matching": {
+    "n": 60,
+    "errors": 0,
+    "mean_score": 65.60999999999999,
+    "ndcg_10": 1.0,
+    "hit_at_1": 0.9,
+    "pairwise": 0.8271604938271605
+  },
+  "retrieval": {
+    "n": 60,
+    "precision_at_5": 0.8699999999999999,
+    "recall_at_5": 0.04258955590528086,
+    "mrr": 0.9805555555555555,
+    "same_category_rate": 0.7866666666666666
+  },
+  "pipeline_meta": {
+    "model_id": "tfidf-lr-v2-9f3b11c2aa41",
+    "version": "2.0.0",
+    "backend": "sentence-transformers",
+    "num_resumes": 3500,
+    "num_categories": 36
+  },
+  "sampled": 60
+}

@@ -1,0 +1,22 @@
+{
+  "weights": {
+    "skill_coverage": 0.34382850357973843,
+    "embedding_similarity": 0.23211578141699435,
+    "category_affinity": 0.4240557150032671
+  },
+  "method": "logistic_regression",
+  "metrics": {
+    "roc_auc": 1.0,
+    "ndcg": 1.0,
+    "pairwise": 1.0,
+    "cross_val_auc": 1.0
+  },
+  "version": "logistic-1",
+  "fitted_on": "/home/vigil/CEI-DataScience-2026/Project/data/hiring_outcomes.jsonl",
+  "n_samples": 24,
+  "coefficients": {
+    "skill_coverage": 1.4659913468595047,
+    "embedding_similarity": 0.9896786435215675,
+    "category_affinity": 1.8080583846561114
+  }
+}

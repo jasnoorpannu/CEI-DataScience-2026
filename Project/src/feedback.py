@@ -6,6 +6,7 @@ from typing import Sequence
 
 import numpy as np
 
+from src.evidence import Evidence, build_component_evidence
 from src.matching import MatchResult, match_resume_to_job
 from src.models import (
     EmbeddingGenerator,
@@ -40,6 +41,20 @@ class SimilarCandidate:
 
 
 @dataclass
+class Recommendation:
+    text: str
+    evidence: Evidence | None = None
+    source: str = "recommendation"
+
+    def to_dict(self) -> dict:
+        return {
+            "text": self.text,
+            "source": self.source,
+            "evidence": self.evidence.to_dict() if self.evidence else None,
+        }
+
+
+@dataclass
 class FeedbackReport:
     match: MatchResult
     predicted_category: str = ""
@@ -48,6 +63,8 @@ class FeedbackReport:
     strengths: list[SkillEvidence] = field(default_factory=list)
     gaps: list[Gap] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
+    recommendation_details: list[Recommendation] = field(default_factory=list)
+    component_evidence: dict[str, list[Evidence]] = field(default_factory=dict)
     summary: str = ""
     similar_candidates: list[SimilarCandidate] = field(default_factory=list)
     benchmark_percentile: float = 0.0
@@ -72,6 +89,9 @@ class FeedbackReport:
                 "embedding_similarity": round(self.match.components.embedding_similarity * 100, 1),
                 "category_affinity": round(self.match.components.category_affinity * 100, 1),
             },
+            "weights_version": self.match.components.weights_version,
+            "semantic_matches": self.match.semantic_matches,
+            "transferable_skills": [list(t) for t in self.match.transferable_skills],
             "strengths": [
                 {"skill": s.skill, "evidence": s.evidence, "importance": round(s.importance, 3)}
                 for s in self.strengths
@@ -86,6 +106,8 @@ class FeedbackReport:
                 for g in self.gaps
             ],
             "recommendations": self.recommendations,
+            "recommendation_details": [r.to_dict() for r in self.recommendation_details],
+            "component_evidence": {k: [e.to_dict() for e in v] for k, v in self.component_evidence.items()},
             "summary": self.summary,
             "similar_candidates": [
                 {"resume_id": c.resume_id, "category": c.category, "score": round(c.score, 3)}
@@ -104,6 +126,9 @@ class FeedbackGenerator:
         category_embeddings: np.ndarray,
         records: Sequence[dict],
         top_skills_by_cat: dict[str, list[str]],
+        weights: dict[str, float] | None = None,
+        weights_version: str | None = None,
+        skill_extractor=None,
     ) -> None:
         self.classifier = classifier
         self.embedder = embedder
@@ -111,6 +136,9 @@ class FeedbackGenerator:
         self.category_embeddings = category_embeddings
         self.records = records
         self.top_skills_by_cat = top_skills_by_cat
+        self.weights = weights
+        self.weights_version = weights_version
+        self.skill_extractor = skill_extractor
         self.category_centroids = self._centroids()
 
     def _centroids(self) -> dict[str, np.ndarray]:
@@ -159,8 +187,23 @@ class FeedbackGenerator:
         resume_text: str,
         job_text: str | None,
         top_k: int = 5,
+        skill_extractor=None,
+        weights: dict[str, float] | None = None,
+        weights_version: str | None = None,
     ) -> FeedbackReport:
-        match = match_resume_to_job(resume_text, job_text, self.classifier, self.embedder, top_k=top_k)
+        skill_extractor = skill_extractor if skill_extractor is not None else self.skill_extractor
+        weights = weights if weights is not None else self.weights
+        weights_version = weights_version if weights_version is not None else self.weights_version
+        match = match_resume_to_job(
+            resume_text,
+            job_text,
+            self.classifier,
+            self.embedder,
+            top_k=top_k,
+            skill_extractor=skill_extractor,
+            weights=weights,
+            weights_version=weights_version,
+        )
 
         predicted_category, predicted_confidence = match.resume_categories[0] if match.resume_categories else ("", 0.0)
         top_terms = self.classifier.top_terms(resume_text)
@@ -203,6 +246,13 @@ class FeedbackGenerator:
         gaps.sort(key=lambda g: g.importance, reverse=True)
 
         recommendations = self._recommendations(match, predicted_category, gaps)
+        component_evidence = build_component_evidence(
+            matched_skills=match.matched_skills,
+            missing_skills=match.missing_skills,
+            resume_text=resume_text,
+            job_text=match.job_text,
+            embedder=self.embedder,
+        )
         percentile = self._benchmark(match, resume_vec)
         summary = self._build_summary(match, predicted_category, predicted_confidence, gaps)
 
@@ -213,7 +263,9 @@ class FeedbackGenerator:
             top_terms=top_terms,
             strengths=strengths,
             gaps=gaps,
-            recommendations=recommendations,
+            recommendations=[r.text for r in recommendations],
+            recommendation_details=recommendations,
+            component_evidence=component_evidence,
             summary=summary,
             similar_candidates=similar,
             benchmark_percentile=percentile,
@@ -250,29 +302,73 @@ class FeedbackGenerator:
 
     def _recommendations(
         self, match: MatchResult, predicted_category: str, gaps: Sequence[Gap]
-    ) -> list[str]:
-        recs = []
+    ) -> list[Recommendation]:
+        recs: list[Recommendation] = []
         if gaps:
-            important = [g.skill for g in gaps if g.importance >= 0.6][:3]
+            important = [g for g in gaps if g.importance >= 0.6][:3]
             if important:
                 recs.append(
-                    f"Prioritize addressing the highest-impact gaps: {', '.join(important)}. "
-                    "These appear frequently in profiles for this role."
+                    Recommendation(
+                        text=f"Prioritize addressing the highest-impact gaps: {', '.join(g.skill for g in important)}. "
+                        "These appear frequently in profiles for this role.",
+                        evidence=Evidence(
+                            text=", ".join(g.suggestion for g in important),
+                            source="recommendation",
+                            score=1.0,
+                            kind="gap",
+                        ),
+                    )
                 )
         top_terms = self.classifier.top_terms(match.resume_text, top_n=5)
         if top_terms and predicted_category:
             terms = ", ".join(term for term, _ in top_terms[:3])
+            evidence_term = top_terms[0][0]
             recs.append(
-                f"Your resume signals '{predicted_category}' strongly through terms like {terms}. "
-                "Make sure these keywords appear in your summary and headline."
+                Recommendation(
+                    text=f"Your resume signals '{predicted_category}' strongly through terms like {terms}. "
+                    "Make sure these keywords appear in your summary and headline.",
+                    evidence=Evidence(
+                        text=self._skill_sentence(evidence_term, match.resume_text) or evidence_term,
+                        source="resume",
+                        score=1.0,
+                        kind="classification",
+                    ),
+                )
             )
         if match.components.embedding_similarity < 0.35:
             recs.append(
-                "Your overall text similarity to the job description is low. "
-                "Tailor your summary and bullet points to mirror the job description's language."
+                Recommendation(
+                    text="Your overall text similarity to the job description is low. "
+                    "Tailor your summary and bullet points to mirror the job description's language.",
+                    evidence=Evidence(
+                        text=match.job_text[:200] if match.job_text else "",
+                        source="job",
+                        score=match.components.embedding_similarity,
+                        kind="similarity",
+                    ),
+                )
+            )
+        if match.transferable_skills:
+            transfer = [f"{src}~{tgt}" for src, tgt, _ in match.transferable_skills[:3]]
+            recs.append(
+                Recommendation(
+                    text=f"Transferable skills can bridge gaps: {', '.join(transfer)}. "
+                    "Highlight how these transfer to the target role.",
+                    evidence=Evidence(
+                        text=", ".join(transfer),
+                        source="skill",
+                        score=1.0,
+                        kind="transferable",
+                    ),
+                )
             )
         if not match.resume_skills:
-            recs.append("No clear technical skills detected. Add a dedicated Skills section with concrete technologies.")
+            recs.append(
+                Recommendation(
+                    text="No clear technical skills detected. Add a dedicated Skills section with concrete technologies.",
+                    evidence=Evidence(text="", source="resume", score=0.0, kind="missing"),
+                )
+            )
         return recs[:5]
 
     def _build_summary(

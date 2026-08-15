@@ -52,6 +52,9 @@ def _normalize_schema(df: pd.DataFrame) -> pd.DataFrame:
             "Education": _as_str(df[education_col]),
         }
     )
+    for extra in ("Name", "Email", "Phone", "Location", "Gender"):
+        if extra in df.columns:
+            out[extra] = _as_str(df[extra])
     out = out[out["Text"].str.len() >= 20].reset_index(drop=True)
     return out
 

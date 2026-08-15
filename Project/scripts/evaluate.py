@@ -5,79 +5,53 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src import config
 from src.data import load_dataset
+from src.evaluation import run_full_evaluation
 from src.pipeline import Pipeline
 
 
 def evaluate(args: argparse.Namespace) -> None:
     pipeline = Pipeline.load()
     df = load_dataset(args.data)
-    print(f"Loaded {len(df)} resumes.")
+    print(f"Loaded {len(df)} resumes across {df['Category'].nunique()} categories.")
+    print(f"Pipeline: model {pipeline.metadata.get('model_id', '?')} "
+          f"v{pipeline.metadata.get('version', '?')}, "
+          f"weights={pipeline.weights_version}")
 
-    preds = pipeline.classifier.predict(df["Text"].tolist())
-    acc = accuracy_score(df["Category"], preds)
-    print(f"\nML classifier category accuracy: {acc:.4f}")
-    print(
-        classification_report(
-            df["Category"], preds, output_dict=False, zero_division=0
-        )
-    )
+    report = run_full_evaluation(pipeline, df, sample_size=args.sample)
+    report.save()
 
-    sample = df.sample(n=args.sample, random_state=config.RANDOM_SEED)
-    score_rows = []
-    errors = 0
-    for _, row in sample.iterrows():
-        job = pipeline.requirements_for_category(row["Category"])
-        try:
-            report = pipeline.feedback(row["Text"], job)
-            score_rows.append(
-                {
-                    "resume_id": row["ResumeID"],
-                    "true_category": row["Category"],
-                    "predicted_category": report.predicted_category,
-                    "score": report.overall_score,
-                    "grade": report.grade,
-                    "matched": len(report.match.matched_skills),
-                    "missing": len(report.match.missing_skills),
-                    "benchmark_percentile": report.benchmark_percentile,
-                }
-            )
-        except Exception as exc:
-            errors += 1
-            print(f"Feedback failed for {row['ResumeID']}: {exc}")
+    cls = report.classification
+    print("\n=== 1. Role classification ===")
+    print(f"Accuracy: {cls['accuracy']:.4f} | Macro F1: {cls['macro_f1']:.4f} | Weighted F1: {cls['weighted_f1']:.4f}")
+    print(f"Note: {cls.get('note', '')}")
+    print(f"Per-class precision/recall/F1 for the 10 lowest-F1 classes:")
+    worst = sorted(cls["per_class"].items(), key=lambda kv: kv[1]["f1"])[:10]
+    for cat, m in worst:
+        print(f"  {cat:28s} P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f} (n={int(m['support'])})")
 
-    if score_rows:
-        df_scores = pd.DataFrame(score_rows)
-        print(f"\nFeedback run on {len(df_scores)} resumes ({errors} errors).")
-        print(f"Mean overall score: {df_scores['score'].mean():.1f}")
-        print(f"Mean matched skills: {df_scores['matched'].mean():.1f}")
-        print(f"Mean missing skills: {df_scores['missing'].mean():.1f}")
-        print(f"Mean benchmark percentile: {df_scores['benchmark_percentile'].mean():.1f}")
-        print(f"Score distribution:\n{df_scores['score'].describe()}")
+    match = report.matching
+    if match:
+        print("\n=== 2. Resume-JD matching (ranking quality) ===")
+        print(f"Sampled {match['n']} resumes (errors: {match.get('errors', 0)})")
+        print(f"NDCG@10: {match['ndcg_10']:.4f} | Hit@1: {match['hit_at_1']:.4f} | Pairwise: {match['pairwise']:.4f} | Mean score: {match['mean_score']:.1f}")
 
-    retrieval_correct = 0
-    retrieval_total = 0
-    for _, row in sample.head(50).iterrows():
-        vec = pipeline.embedder.encode_one(row["Text"])
-        neighbors = pipeline.store.search(vec, k=6)
-        for n in neighbors[1:]:
-            retrieval_total += 1
-            if n.payload.get("Category") == row["Category"]:
-                retrieval_correct += 1
-    if retrieval_total:
-        print(f"\nSimilar-profile retrieval same-category rate: {retrieval_correct / retrieval_total:.2%}")
+    ret = report.retrieval
+    if ret:
+        print("\n=== 3. Retrieval quality ===")
+        print(f"Precision@5: {ret['precision_at_5']:.4f} | Recall@5: {ret['recall_at_5']:.4f} | MRR: {ret['mrr']:.4f} | Same-category@6: {ret['same_category_rate']:.4f}")
+
+    print(f"\nFull report written to:\n  {config.ARTIFACT_EVAL_REPORT}\n  {config.ARTIFACT_EVAL_REPORT_MD}")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate the resume pipeline")
+    parser = argparse.ArgumentParser(description="Evaluate the resume pipeline end to end")
     parser.add_argument("--data", default=str(config.DEFAULT_DATASET), help="Path to dataset")
-    parser.add_argument("--sample", type=int, default=40, help="Number of resumes for feedback eval")
+    parser.add_argument("--sample", type=int, default=60, help="Number of resumes for matching/retrieval eval")
     args = parser.parse_args()
     evaluate(args)
 
