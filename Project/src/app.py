@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from src import config
 from src.auth import AuthManager
 from src.feedback import FeedbackReport
 from src.hiring import Candidate, CandidateComparator, CandidateScreener, HiringWorkflow, candidates_from_dataframe
@@ -470,7 +471,7 @@ def page_evaluation():
         "`python scripts/calibrate.py` to re-fit the match weights from labelled hiring outcomes."
     )
 
-    report_path = Path("models/eval_report.json")
+    report_path = config.ARTIFACT_EVAL_REPORT
     if report_path.exists():
         import json
 
