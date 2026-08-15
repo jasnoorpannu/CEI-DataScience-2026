@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -13,6 +14,8 @@ from sklearn.preprocessing import LabelEncoder, Normalizer
 
 from src import config
 from src.utils import clean_text, sentence_split
+
+logger = logging.getLogger("resumefit.models")
 
 
 class TFIDFClassifier:
@@ -110,6 +113,7 @@ class EmbeddingGenerator:
         self._vectorizer: TfidfVectorizer | None = None
         self._svd: TruncatedSVD | None = None
         self._normalizer = Normalizer(norm="l2")
+        self._fallback_corpus: list[str] | None = None
 
     @property
     def embedding_dim(self) -> int:
@@ -120,11 +124,32 @@ class EmbeddingGenerator:
         return self.dimension
 
     def _load_st(self):
-        from sentence_transformers import SentenceTransformer
-
-        if self._st_model is None:
-            self._st_model = SentenceTransformer(self.model_name)
+        if self._st_model is not None:
+            return self._st_model
+        try:
+            from sentence_transformers import SentenceTransformer
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(
+                "sentence-transformers could not be imported. Install a compatible set of "
+                "'sentence-transformers', 'transformers' and 'torch' (see "
+                "src/requirements.txt). Underlying error: %r" % (exc,)
+            ) from exc
+        self._st_model = SentenceTransformer(self.model_name)
         return self._st_model
+
+    def set_fallback_corpus(self, texts: Sequence[str] | None) -> None:
+        self._fallback_corpus = list(texts) if texts is not None else None
+
+    def _ensure_fallback(self) -> None:
+        if self._vectorizer is not None or not self._fallback_corpus:
+            return
+        logger.warning(
+            "sentence-transformers unavailable; fitting TF-IDF/SVD fallback embedder "
+            "(%d docs) to keep scoring functional.",
+            len(self._fallback_corpus),
+        )
+        self.dimension = config.EMBEDDING_DIM
+        self.fit_fallback(self._fallback_corpus)
 
     def fit_fallback(self, texts: Sequence[str]) -> "EmbeddingGenerator":
         self._vectorizer = TfidfVectorizer(
@@ -150,9 +175,11 @@ class EmbeddingGenerator:
                 model = self._load_st()
                 vectors = model.encode(list(texts), normalize_embeddings=True, show_progress_bar=False)
                 return np.asarray(vectors, dtype=np.float32)
-            except Exception:
-                if self._svd is None:
-                    raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "sentence-transformers encode failed (%r); falling back to TF-IDF/SVD.", exc
+                )
+        self._ensure_fallback()
         if self._vectorizer is None:
             raise RuntimeError("Fallback embedder not fitted; call fit_fallback first.")
         x = self._vectorizer.transform([clean_text(t) for t in texts])

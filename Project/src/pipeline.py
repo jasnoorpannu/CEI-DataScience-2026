@@ -59,6 +59,9 @@ class Pipeline:
 
         self.records = self._load_records()
         self.metadata = self._load_metadata()
+        self.embedder.set_fallback_corpus(
+            [r.get("Text", "") for r in self.records if r.get("Text")]
+        )
 
         calibrated = load_calibrated_weights()
         if calibrated is not None:
